@@ -10,7 +10,7 @@ use lib qw(. lib);
 our $VERSION = 0.1;
 
 my $builder = Module::Build->new(
-				 module_name         => 'Test::WWW::Selenium::ide_to_TWS',
+				 module_name         => 'Test::WWW::Selenium::Conversion::IDE',
 				 dist_author         => q(Andy Brown <setitesuk@gmail.com>),
 				 dist_version        => $VERSION,
 				 dist_abstract       => q[module to during a test run convert on the fly Selenese IDE html to perl tests],
@@ -29,6 +29,7 @@ my $builder = Module::Build->new(
 				 build_requires      => {
                'Test::Exception' => 0,
                'JSON' => 0,
+               'Test::MockObject' => 0,
 							},
 				 build_recommends    => {
 							 'Test::Perl::Critic' => '1.116',

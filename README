@@ -5,6 +5,12 @@ This module exports ide_to_TWS_run_from_suite_file ide_to_TWS_run_from_test_file
 
 Note, this should still be considered in alpha release mode. Whilst a number of actions are covered, not all are yet.
 
+I would welcome anyone wanting to inform me of the next most important actions to be covered if you need them, or submit of a patch to do so.
+
+The repository can be found on github
+
+https://github.com/setitesuk/Test--WWW--Selenium--ide_to_TWS
+
 Other things of note
 
 verify and assert work in the same way, there is no stopping of the test on assert, as I decided that I would want the test to complete as best as it can.
