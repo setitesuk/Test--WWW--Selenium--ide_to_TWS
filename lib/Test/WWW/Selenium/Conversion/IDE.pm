@@ -10,7 +10,7 @@ use Test::More; # this is designed to be a helper for tests, OK
 use Test::WWW::Selenium; # we are going to run the tests in this
 use XML::LibXML;
 use base q{Exporter};
-use Readonly; Readonly::Scalar our $VERSION => 0.1;
+use Readonly; Readonly::Scalar our $VERSION => 0.2;
 
 our @EXPORT = qw{ ide_to_TWS_run_from_suite_file ide_to_TWS_run_from_test_file };
 
@@ -201,7 +201,48 @@ $LastChangedRevision$
 
 =head1 SYNOPSIS
 
+****NOTE THIS IS IN ALPHA****
+
+This module exports two functions to your test file, ide_to_TWS_run_from_suite_file and ide_to_TWS_run_from_test_file.
+
+The objective is to run through Selenium IDE HTML files (Selenese) and run the tests as part of TAP in your perl test suite.
+
+Rather than produce a perl test file which by itself can be run, this sits between a test file and the  Selenese tests, converting on the fly, so you can just add more tests in as you get more user stories, and they will automatically run for you.
+
+Thsi uses Test::WWW::Selenium and tries hard to use close to equivalents to the IDE commands. I do not expect it to be perfect, but should perform fairly close to.
+
+****ALPHA - not all IDE commands have yet been converted, expect updates - ALPHA****
+
 =head1 DESCRIPTION
+
+How to use
+
+Follow instructions found to download and start the Selenium Server, and you should take into account what the selenium docs say about running this. You may also need a webserver to serve you a dev version of your website (if that is what you are wanting to test).
+
+In your test file:
+
+  use Test::More;
+  use Test::WWW::Selenium;
+  use Test::WWW::Selenium::Conversion::IDE;
+  
+  my $sel = Test::WWW::Selenium->new( {creds} ); # See documentation for Test::WWW::Selenium
+  
+  ide_to_TWS_run_from_suite_file( $sel, $suite_file_name, $location_of_sel_test_root );
+  ide_to_TWS_run_from_test_file( $sel, {
+    test_file => $test_file_name,
+    sel_test_root => $location_of_sel_test_root,
+  } );
+  
+  done_testing();
+
+$location_of_sel_test_root is optional, it defaults to t/selenium_tests
+
+The selenium_server object is left to you to do in your test file, as your credentials, the browser you want to use... may be different. There is no helper method for this.
+
+You can also pass in an optional XML::LibXML parser if you have one built, either as the last arg to 
+ide_to_TWS_run_from_suite_file or 'parser => $oParser' added to the args href to ide_to_TWS_run_from_test_file.
+
+It is worth noting, that whilst there is a difference between verify and assert in the IDE, the Conversion treats them as equivalent. This is currently deliberate, or a feature, and is unlikely to be changed in the future - who wants their test suite to croak rather than report failures? Not me!
 
 =head1 SUBROUTINES/METHODS
 
@@ -241,9 +282,15 @@ If you just want to run one Selenese HTML IDE test file, then use this method (a
 
 =head1 BUGS AND LIMITATIONS
 
+As with any software, there is likely to be bugs (particularly whilst in alpha). Please feel free to report any you find.
+
+The repository can be found
+
+https://github.com/setitesuk/Test--WWW--Selenium--ide_to_TWS
+
 =head1 AUTHOR
 
-Author: Andrew Brown (setitesuk@gmail.com)
+Author: Andy Brown (setitesuk@gmail.com)
 
 =head1 LICENSE AND COPYRIGHT
 
