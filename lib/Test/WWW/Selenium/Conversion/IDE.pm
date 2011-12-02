@@ -97,7 +97,7 @@ sub _ide_to_TWS_convert_to_method_and_test {
 
 sub _ide_to_TWS_verifyTitle_test {
   my ( $sel, $args ) = @_;
-  is( $sel->get_title(), $args->{operand_1}, qq{Title is $args->{operand_1}} );  
+  is( $sel->get_title(), $args->{operand_1}, qq{Title is $args->{operand_1}} );
   return;
 }
 
