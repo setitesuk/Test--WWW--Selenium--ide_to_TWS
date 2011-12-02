@@ -1,0 +1,263 @@
+#########
+# Author:        Andy Brown (setitesuk@gmail.com)
+package Test::WWW::Selenium::Conversion::IDE;
+
+use strict;
+use warnings;
+use Carp;
+use English q{-no_match_vars};
+use Test::More; # this is designed to be a helper for tests, OK
+use Test::WWW::Selenium; # we are going to run the tests in this
+use XML::LibXML;
+use base q{Exporter};
+use Readonly; Readonly::Scalar our $VERSION => 0.1;
+
+our @EXPORT = qw{ ide_to_TWS_run_from_suite_file ide_to_TWS_run_from_test_file };
+
+Readonly::Scalar our $DEFAULT_TIMEOUT => 50_000;
+Readonly::Scalar our $DEFAULT_SELENIUM_LOCATION => q{t/selenium_tests};
+
+sub ide_to_TWS_run_from_suite_file {
+  my ( $sel, $suite_file, $sel_test_root ) = @_;
+  $sel_test_root ||= $DEFAULT_SELENIUM_LOCATION;
+
+  my $parser = XML::LibXML->new();
+  my $suite = $parser->parse_html_file( qq{$sel_test_root/$suite_file} );
+  my @tests = $suite->getElementsByTagName( q{a} );
+  foreach my $test ( @tests ) {
+    my $test_file = $test->getAttribute( q{href} );
+    $test_file =~ s{[.]/}{}xms;
+    ide_to_TWS_run_from_test_file( $sel, {
+      test_file => $test_file,
+      sel_test_root => $sel_test_root,
+      parser => $parser,
+    } );
+  }
+  return 1;
+}
+
+sub ide_to_TWS_run_from_test_file {
+  my ( $sel, $args ) = @_;
+  my $test_file = $args->{test_file};
+  my $sel_test_root = $args->{sel_test_root} || $DEFAULT_SELENIUM_LOCATION;
+  my $parser = $args->{parser} || XML::LibXML->new();
+
+  my $test_dom = $parser->parse_html_file( qq{$sel_test_root/$test_file} );
+  my @title_tags = $test_dom->getElementsByTagName( q{title} );
+  my $title = $title_tags[0]->firstChild->nodeValue();
+  note qq{Running Selenium Test: '$title'};
+
+  my ($tbody) = $test_dom->getElementsByTagName( q{tbody} );
+  foreach my $action_set ( $tbody->getElementsByTagName( q{tr} ) ) {
+    my ( $action, $operand_1, $operand_2 ) = $action_set->getElementsByTagName( q{td} );
+    foreach my $node ( $action, $operand_1, $operand_2 ) {
+      if ( defined $node->firstChild ) {
+        $node = $node->firstChild->nodeValue();
+      } else {
+        $node = q{};
+      }
+    }
+    if ( $operand_1 =~ m{\A[(]?//}xms ) {
+      $operand_1 = q{xpath=} . $operand_1;
+    }
+    _ide_to_TWS_convert_to_method_and_test( $sel, {
+      action => $action,
+      operand_1 => $operand_1,
+      operand_2 => $operand_2,
+    } );
+  }
+  return 1;
+}
+
+sub _ide_to_TWS_convert_to_method_and_test {
+  my ( $sel, $args ) = @_;
+
+  my %actions = (
+    open => \&_ide_to_TWS_open_test,
+    verifyTitle => \&_ide_to_TWS_verifyTitle_test,
+    verifyText => \&_ide_to_TWS_verifyTextPresent_test,
+    verifyTextPresent => \&_ide_to_TWS_verifyTextPresent_test,
+    assertText => \&_ide_to_TWS_verifyTextPresent_test,
+    assertTextPresent => \&_ide_to_TWS_verifyTextPresent_test,
+    waitForElementPresent => \&_ide_to_TWS_waitForText,
+    clickAndWait => \&_ide_to_TWS_clickAndWait,
+    click => \&_ide_to_TWS_clickAndWait,
+    type => \&_ide_to_TWS_type,
+    waitForText => \&_ide_to_TWS_waitForText,
+  );
+  eval {
+   $actions{$args->{action}}( $sel, $args );
+   1;
+  } or do {
+    diag explain $args;
+    croak qq{\t$EVAL_ERROR};
+  };
+  return;
+}
+
+sub _ide_to_TWS_verifyTitle_test {
+  my ( $sel, $args ) = @_;
+  is( $sel->get_title(), $args->{operand_1}, qq{Title is $args->{operand_1}} );  
+  return;
+}
+
+sub _ide_to_TWS_waitForText {
+  my ( $sel, $args ) = @_;
+  my $op1 = $args->{operand_1};
+  my $op2 = $args->{operand_2};
+  if ( $op1 && $op2 ) {
+    note qq{waiting for text $op2 in $op1};
+    my $found = 0;
+    while ( ! $found ) {
+      eval {
+        my $text = $sel->get_text( $op1 );
+        if ( $op2 =~ m/regexp/ixms ) {
+          my ( $type, $expression ) = $op2 =~ m/(regexp[i]?):(.*)/ixms;
+          if ( $type =~ /i/ixms ) {
+            if ( $text =~ m/$expression/ixms ) {
+              $found++;
+            }
+          } else {
+            if ( $text =~ m/$expression/xms ) {
+              $found++;
+            }
+          }
+        } else {
+          if ( $text eq $op2 ) {
+            $found++;
+          }
+        }
+      } or do {};
+      if ( ! $found ) { sleep 1; }
+    }
+  } else {
+    note qq{waiting for text $op1};
+    if ( $op1 =~ m/[id|identifier|css]=/xms ) {
+      $sel->wait_for_element_present( $op1, $DEFAULT_TIMEOUT );
+    } else {
+      $sel->wait_for_text_present( $op1, $DEFAULT_TIMEOUT );
+    }
+  }
+  return;
+}
+
+sub _ide_to_TWS_type {
+  my ( $sel, $args ) = @_;
+  note qq{typing $args->{operand_2} into $args->{operand_1}};
+  $sel->type( $args->{operand_1}, $args->{operand_2} );
+  return;
+}
+
+sub _ide_to_TWS_clickAndWait {
+  my ( $sel, $args ) = @_;
+  note qq{clicking $args->{operand_1}};
+  $sel->click($args->{operand_1});
+  if ( $args->{action} ne q{click} ) {
+    note q{waiting for page to load};
+    $sel->wait_for_page_to_load( $DEFAULT_TIMEOUT );
+  }
+  return;
+}
+
+sub _ide_to_TWS_verifyTextPresent_test {
+  my ( $sel, $args ) = @_;
+  my $text1 = $args->{operand_1};
+  my $text2 = $args->{operand_2};
+  if ( $text2 ) {
+    if ( $text1) {
+      ok( $sel->is_element_present($text1), qq{element $text1 present on page} );
+      if ( $text2 !~ m/\A[[:lower:]]+:/ixms || $text2 =~ m/\Aexact:/ixms ) {
+        $text2 =~ s/exact://ixms;
+        is( $sel->get_text($text1), $text2, qq{element $text1 has text of $text2} );
+      }
+    }
+  } else {
+    if ( $text1 =~ m/=/xms ) {
+      ok( $sel->is_element_present($text1), qq{element $text1 present on page} );
+    } else {
+      like( $sel->get_body_text, qr{$text1}xms, qq{body text contains $text1} );
+    }
+  }
+  return;
+}
+
+sub _ide_to_TWS_open_test {
+  my ( $sel, $args ) = @_;
+  my $page = $args->{operand_1};
+  $sel->open_ok( $page, undef, qq{open page $page} );
+  return
+}
+
+1;
+__END__
+
+=head1 NAME
+
+Test::WWW::Selenium::Conversion::IDE
+
+=head1 VERSION
+
+$LastChangedRevision$
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+=head1 SUBROUTINES/METHODS
+
+=head2 ide_to_TWS_run_from_suite_file
+
+If you have a suite file in your selenium tests directory (default t/selenium_tests) then using this function will run all test files listed in the suite
+
+  ide_to_TWS_run_from_suite_file( $oTestWWWSelenium, $suite_file_name );
+  ide_to_TWS_run_from_suite_file( $oTestWWWSelenium, $suite_file_name, $selenium_test_directory_path);
+
+=head2 ide_to_TWS_run_from_test_file
+
+If you just want to run one Selenese HTML IDE test file, then use this method (again, default location is t/selenium_tests)
+
+  ide_to_TWS_run_from_test_file( $oTestWWWSelenium, $test_file_name );
+  ide_to_TWS_run_from_test_file( $oTestWWWSelenium, $test_file_name, $selenium_test_directory_path );
+
+=head1 DIAGNOSTICS
+
+=head1 CONFIGURATION AND ENVIRONMENT
+
+=head1 DEPENDENCIES
+
+=over
+
+=item strict
+
+=item warnings
+
+=item Carp
+
+=item English -no_match_vars
+
+=back
+
+=head1 INCOMPATIBILITIES
+
+=head1 BUGS AND LIMITATIONS
+
+=head1 AUTHOR
+
+Author: Andrew Brown (setitesuk@gmail.com)
+
+=head1 LICENSE AND COPYRIGHT
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+=cut

@@ -1,0 +1,10 @@
+Test::WWW::Selenium::ide_to_TWS
+-------------------------------
+
+This module exports ide_to_TWS_run_from_suite_file ide_to_TWS_run_from_test_file to your test script, and then by parsing the Selense HTML IDE produced files, converts to WWW::Selenium equivalents and runs as close to equivalent actions/tests as possible.
+
+Note, this should still be considered in alpha release mode. Whilst a number of actions are covered, not all are yet.
+
+Other things of note
+
+verify and assert work in the same way, there is no stopping of the test on assert, as I decided that I would want the test to complete as best as it can.

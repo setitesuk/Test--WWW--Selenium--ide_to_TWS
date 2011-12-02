@@ -1,0 +1,11 @@
+Build.PL
+Changes
+MANIFEST
+README
+t/00-critic.t
+t/00-distribution.t
+t/00-kwalitee.t
+t/00-pod.t
+t/00-podcoverage.t
+t/perlcriticrc
+Makefile.PL
