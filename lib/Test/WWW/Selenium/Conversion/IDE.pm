@@ -10,7 +10,7 @@ use Test::More; # this is designed to be a helper for tests, OK
 use Test::WWW::Selenium; # we are going to run the tests in this
 use XML::LibXML;
 use base q{Exporter};
-use Readonly; Readonly::Scalar our $VERSION => 0.2;
+use Readonly; Readonly::Scalar our $VERSION => 0.3;
 
 our @EXPORT = qw{ ide_to_TWS_run_from_suite_file ide_to_TWS_run_from_test_file };
 
@@ -175,7 +175,7 @@ sub _ide_to_TWS_verifyTextPresent_test {
     if ( $text1 =~ m/=/xms ) {
       ok( $sel->is_element_present($text1), qq{element $text1 present on page} );
     } else {
-      like( $sel->get_body_text, qr{$text1}xms, qq{body text contains $text1} );
+      like( $sel->get_body_text, qr{$text1}, qq{body text contains $text1} ); ## no critic (RegularExpressions::RequireDotMatchAnything RegularExpressions::RequireExtendedFormatting RegularExpressions::RequireLineBoundaryMatching)
     }
   }
   return;
