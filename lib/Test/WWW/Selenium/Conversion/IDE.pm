@@ -217,7 +217,7 @@ Test::WWW::Selenium::Conversion::IDE
 
 =head1 VERSION
 
-$LastChangedRevision$
+0.4
 
 =head1 SYNOPSIS
 
