@@ -10,12 +10,13 @@ use Test::More; # this is designed to be a helper for tests, OK
 use Test::WWW::Selenium; # we are going to run the tests in this
 use XML::LibXML;
 use base q{Exporter};
-use Readonly; Readonly::Scalar our $VERSION => 0.3;
+use Readonly; Readonly::Scalar our $VERSION => 0.4;
 
 our @EXPORT = qw{ ide_to_TWS_run_from_suite_file ide_to_TWS_run_from_test_file };
 
 Readonly::Scalar our $DEFAULT_TIMEOUT => 50_000;
 Readonly::Scalar our $DEFAULT_SELENIUM_LOCATION => q{t/selenium_tests};
+Readonly::Scalar our $MAX_TIMES_TO_LOOP => 20;
 
 sub ide_to_TWS_run_from_suite_file {
   my ( $sel, $suite_file, $sel_test_root ) = @_;
@@ -51,7 +52,7 @@ sub ide_to_TWS_run_from_test_file {
   foreach my $action_set ( $tbody->getElementsByTagName( q{tr} ) ) {
     my ( $action, $operand_1, $operand_2 ) = $action_set->getElementsByTagName( q{td} );
     foreach my $node ( $action, $operand_1, $operand_2 ) {
-      if ( defined $node->firstChild ) {
+      if ( defined $node && defined $node->firstChild ) {
         $node = $node->firstChild->nodeValue();
       } else {
         $node = q{};
@@ -60,11 +61,12 @@ sub ide_to_TWS_run_from_test_file {
     if ( $operand_1 =~ m{\A[(]?//}xms ) {
       $operand_1 = q{xpath=} . $operand_1;
     }
-    _ide_to_TWS_convert_to_method_and_test( $sel, {
+    my $test_args = {
       action => $action,
       operand_1 => $operand_1,
       operand_2 => $operand_2,
-    } );
+    };
+    _ide_to_TWS_convert_to_method_and_test( $sel, $test_args);
   }
   return 1;
 }
@@ -90,7 +92,7 @@ sub _ide_to_TWS_convert_to_method_and_test {
    1;
   } or do {
     diag explain $args;
-    croak qq{\t$EVAL_ERROR};
+    diag qq{\t$EVAL_ERROR};
   };
   return;
 }
@@ -108,7 +110,9 @@ sub _ide_to_TWS_waitForText {
   if ( $op1 && $op2 ) {
     note qq{waiting for text $op2 in $op1};
     my $found = 0;
-    while ( ! $found ) {
+    my $count = 1;
+    while ( ! $found && $count < $MAX_TIMES_TO_LOOP ) {
+      $count++;
       eval {
         my $text = $sel->get_text( $op1 );
         if ( $op2 =~ m/regexp/ixms ) {
@@ -128,14 +132,18 @@ sub _ide_to_TWS_waitForText {
           }
         }
       } or do {};
-      if ( ! $found ) { sleep 1; }
+      if ( ! $found ) {
+        sleep 1;
+      }
     }
+    $count = $count < $MAX_TIMES_TO_LOOP ? $count : $MAX_TIMES_TO_LOOP;
+    ok( $found, qq{waiting for text $op2 in $op1 - tried $count times} );
   } else {
     note qq{waiting for text $op1};
     if ( $op1 =~ m/[id|identifier|css]=/xms ) {
-      $sel->wait_for_element_present( $op1, $DEFAULT_TIMEOUT );
+      ok( $sel->wait_for_element_present( $op1, $DEFAULT_TIMEOUT ), qq{waiting for text $op1} );
     } else {
-      $sel->wait_for_text_present( $op1, $DEFAULT_TIMEOUT );
+      ok( $sel->wait_for_text_present( $op1, $DEFAULT_TIMEOUT ), qq{waiting for text $op1} );
     }
   }
   return;
@@ -150,11 +158,23 @@ sub _ide_to_TWS_type {
 
 sub _ide_to_TWS_clickAndWait {
   my ( $sel, $args ) = @_;
-  note qq{clicking $args->{operand_1}};
-  $sel->click($args->{operand_1});
+  my $msg = qq{clicking $args->{operand_1}};
+  note $msg;
+  my $result;
+  my $payload;
+  eval { $sel->click($args->{operand_1}); $result = 1; } or do { $result = 0; $payload = $EVAL_ERROR; };
+  ok( $result, $msg );
+  if ( ! $result ) {
+    diag $payload;
+  }
   if ( $args->{action} ne q{click} ) {
-    note q{waiting for page to load};
-    $sel->wait_for_page_to_load( $DEFAULT_TIMEOUT );
+    $msg = q{waiting for page to load};
+    note $msg;
+    if ( ! $result ) {
+      ok( 0, $msg ); # auto fail if click failed
+    } else {
+      ok( $sel->wait_for_page_to_load( $DEFAULT_TIMEOUT ), $msg );
+    }
   }
   return;
 }
@@ -209,7 +229,7 @@ The objective is to run through Selenium IDE HTML files (Selenese) and run the t
 
 Rather than produce a perl test file which by itself can be run, this sits between a test file and the  Selenese tests, converting on the fly, so you can just add more tests in as you get more user stories, and they will automatically run for you.
 
-Thsi uses Test::WWW::Selenium and tries hard to use close to equivalents to the IDE commands. I do not expect it to be perfect, but should perform fairly close to.
+This uses Test::WWW::Selenium and tries hard to use close to equivalents to the IDE commands. I do not expect it to be perfect, but should perform fairly close to.
 
 ****ALPHA - not all IDE commands have yet been converted, expect updates - ALPHA****
 
