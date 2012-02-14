@@ -82,6 +82,7 @@ sub _ide_to_TWS_convert_to_method_and_test {
     assertText => \&_ide_to_TWS_verifyTextPresent_test,
     assertTextPresent => \&_ide_to_TWS_verifyTextPresent_test,
     waitForElementPresent => \&_ide_to_TWS_waitForText,
+    assertElementPresent => \&_ide_to_TWS_verifyTextPresent_test,
     clickAndWait => \&_ide_to_TWS_clickAndWait,
     click => \&_ide_to_TWS_clickAndWait,
     type => \&_ide_to_TWS_type,
