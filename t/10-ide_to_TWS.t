@@ -12,7 +12,7 @@ my (  $output, $mocked_tws,
       $selected_value, $selected_index, $selected_id, $is_something_selected, $attribute,
       $is_text_present, $is_el_present, $is_visible, $is_editable, $html, $is_ordered, $el_pos_left,
       $el_pos_top, $el_width, $el_height, $cursor_position, $expression, $xpath_count, $id, $cookie,
-      $script, $is_location, $is_selected, $text_loc );
+      $script, $is_location, $is_selected, $text_loc, $is_text_present_ok, $type_ok, $click_ok, $wait_for_page_to_load_ok, $open_ok, $title_is );
 # variables - array
 my (  @selected_values, @selected_labels, @selected_indexes, @selected_ids, @select_options, @buttons,
       @links, @fields, @window_ids, @window_names, @window_titles );
@@ -38,7 +38,7 @@ sub BEGIN {
     create_cookie delete_cookie delete_all_visible_cookies set_browser_log_level
     attach_file shut_down_selenium_server stop key_down_native key_up_native
     key_press_native wait_for_text_present wait_for_element_present set_timeout
-    open_ok
+    open_ok is_text_present_ok type_ok click_ok open_ok wait_for_page_to_load_ok
   } );
   $mocked_tws->set_bound( q{set_speed}, \$speed );
   $mocked_tws->set_bound( q{get_speed}, \$speed );
@@ -71,6 +71,7 @@ sub BEGIN {
   $mocked_tws->mock( q{is_element_present}, sub { return $is_el_present } );
   $mocked_tws->mock( q{is_visible}, sub { return $is_visible } );
   $mocked_tws->mock( q{is_editable}, sub { return $is_editable } );
+  $mocked_tws->mock( q{title_is}, sub { return \$title } );
   $mocked_tws->set_bound( q{get_all_buttons}, \@buttons );
   $mocked_tws->set_bound( q{get_all_links}, \@links );
   $mocked_tws->set_bound( q{get_all_fields}, \@fields );
@@ -112,6 +113,7 @@ $is_el_present = 1;
 $text_loc = q{UK};
 $title = q{Andy Brown - search.cpan.org};
 $body_text = q{SETITESUK};
+$is_text_present = 1;
 ide_to_TWS_run_from_test_file( $sel, { test_file => q{1_test.html} } );
 ide_to_TWS_run_from_suite_file( $sel, q{suite_file.html} );
 
