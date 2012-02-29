@@ -7,7 +7,7 @@ use warnings;
 use Module::Build;
 use lib qw(. lib);
 
-our $VERSION = 0.4;
+our $VERSION = 0.5;
 
 my $builder = Module::Build->new(
 				 module_name         => 'Test::WWW::Selenium::Conversion::IDE',

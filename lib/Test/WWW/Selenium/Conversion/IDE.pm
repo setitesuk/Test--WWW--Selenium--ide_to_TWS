@@ -10,7 +10,7 @@ use Test::More; # this is designed to be a helper for tests, OK
 use Test::WWW::Selenium; # we are going to run the tests in this
 use XML::LibXML;
 use base q{Exporter};
-use Readonly; Readonly::Scalar our $VERSION => 0.4;
+use Readonly; Readonly::Scalar our $VERSION => 0.5;
 
 our @EXPORT = qw{ ide_to_TWS_run_from_suite_file ide_to_TWS_run_from_test_file };
 
@@ -87,6 +87,9 @@ sub _ide_to_TWS_convert_to_method_and_test {
     click => \&_ide_to_TWS_clickAndWait,
     type => \&_ide_to_TWS_type,
     waitForText => \&_ide_to_TWS_waitForText,
+    select => \&_ide_to_TWS_select,
+    selectAndWait => \&_ide_to_TWS_select,
+    random_alert => \&_ide_to_TWS_random_alert,
   );
   eval {
    $actions{$args->{action}}( $sel, $args );
@@ -95,6 +98,20 @@ sub _ide_to_TWS_convert_to_method_and_test {
     diag explain $args;
     diag qq{\t$EVAL_ERROR};
   };
+  return;
+}
+
+sub _ide_to_TWS_random_alert {
+  my ( $sel, $args ) = @_;
+  my $alert_present = $sel->is_alert_present;
+  my $msg = q{Random alert } . ( $alert_present ? q{} : q{not } ) . q{found} . ( $alert_present ? q{ } . $sel->get_alert : q{} );
+  pass($msg);
+  return;
+}
+
+sub _ide_to_TWS_select {
+  my ( $sel, $args ) = @_;
+  ok( $sel->select($args->{operand_1}, $args->{operand_2}), , qq{select $args->{operand_2} from $args->{operand_1}} );
   return;
 }
 
@@ -218,7 +235,7 @@ Test::WWW::Selenium::Conversion::IDE
 
 =head1 VERSION
 
-0.4
+0.5
 
 =head1 SYNOPSIS
 

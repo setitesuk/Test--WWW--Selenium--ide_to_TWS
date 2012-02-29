@@ -16,3 +16,7 @@ Other things of note
 verify and assert work in the same way, there is no stopping of the test on assert, as I decided that I would want the test to complete as best as it can.
 
 See the POD in Test::WWW::Selenium::Conversion::IDE for usage.
+
+Extras:
+
+There is a folder in here new_code with RunIDE.pm file. This is some code sent to me by Alex Malek which might be an improvement over the current code, however, as yet I have been unable to make it pass my test suite. If you are able to do anything with it, please feel free to contact me and submit a patch to do this. When I find time, I plan to take a look myself. Thanks to Alex for the submission.
